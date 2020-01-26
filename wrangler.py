@@ -1,3 +1,5 @@
+from item import DependencyItem
+
 class DependencyWrangler(object):
     """
     The DependencyWrangler class analyzes a dependency tree, reconstructs the tree in an object-oriented way and allows
@@ -36,6 +38,18 @@ class DependencyWrangler(object):
     def object_identifier_attribute(self):
         pass
 
+    @property
+    def analysed_objects(self):
+        return self._dependency_tree.keys()
+
+    @property
+    def items(self):
+        return self._dependency_tree
+
+    @items.setter
+    def items(self):
+        pass
+
     def __init__(self,
                  object_class=None,
                  object_upstream_callback=None,
@@ -69,6 +83,8 @@ class DependencyWrangler(object):
         self._object_downstream_callback = object_downstream_callback
         self._object_identifier_attribute = object_identifier_attribute
 
+        self._dependency_tree = dict()
+
     def validate(self):
         """
         Validate that the DependencyWrangler class has been initialized and populated correctly, by iterating through
@@ -98,3 +114,44 @@ class DependencyWrangler(object):
             )
 
         return True
+
+    def _define_item(self, item_identifier, item):
+        """
+        Creates a DependencyItem object which contains both the upstream and downstream dependencies
+        for this object within the iteration. It will also append the created object to the internal list of
+        processed objects
+        :param item_identifier: (object) unique name of the object in iteration
+        :param item: (object) the actual object that the DependencyItem object will represent
+        :return: (DependencyObject) the internal object representing the actual object
+        """
+        processed_item = DependencyItem(item_identifier, item)
+        self._dependency_tree[item_identifier] = processed_item
+        return processed_item
+
+    def analyse(self, item):
+        """
+        Analyse & constructs the dependency tree from a specified object. This function will use the callbacks defined
+        this class to obtain the upstream and downstream dependencies against the actual object itself.
+        :param item: (object) the object to analyse the tree from
+        :return: (DependencyItem) returns a DependencyItem object that represents the item specified
+        """
+        # Run validation to ensure that this instance of the DependencyWrangler is populated correctly
+        self.validate()
+        # Extract the unique identifier from the specified item
+        item_identifier = getattr(item, self.object_identifier_attribute)
+        # Only process this object if it hasn't been processed already. This would be the case when working upwards
+        # through a tree, and making our way back down to catch any lingering dependencies in a more complex dependency
+        # tree
+        if item_identifier not in self.analysed_objects:
+            # Create an internal item that represents the real item that is currently within the iteration
+            processed_item = self._define_item(item_identifier, item)
+            # Loop through upstream dependencies and re-call this analyse function
+            for dependency in self.object_upstream_callback(item):
+                dependency_item = self.analyse(dependency)
+                processed_item.append_upstream_dependency(dependency_item)
+            # Loop through downstream dependencies and re-call this analyse function
+            for dependency in self.object_downstream_callback(item):
+                dependency_item = self.analyse(dependency)
+                processed_item.append_downstream_dependency(dependency_item)
+        # Return the item that has been created and or referenced in this iteration
+        return self.items[item_identifier]

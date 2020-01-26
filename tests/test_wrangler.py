@@ -5,12 +5,20 @@ from ..wrangler import DependencyWrangler
 class SampleDependencyObject(object):
     def __init__(self, id):
         self.id = id
+        self._upstream_dependencies = []
+        self._downstream_dependencies = []
+
+    def append_upstream_dependency(self, item):
+        self._upstream_dependencies.append(item)
+
+    def append_downstream_dependency(self, item):
+        self._downstream_dependencies.append(item)
 
     def upstream_dependencies(self):
-        return []
+        return self._upstream_dependencies
 
     def downstream_dependencies(self):
-        return []
+        return self._downstream_dependencies
 
     def invalid_upstream_dependencies(self):
         pass
@@ -18,6 +26,20 @@ class SampleDependencyObject(object):
     def invalid_downstream_dependencies(self):
         pass
 
+def construct_sample_tree_item():
+    item_names = ["ItemA", "ItemB", "ItemC", "ItemD", "ItemE"]
+    items = [
+        SampleDependencyObject(item_name)
+        for item_name in item_names
+    ]
+
+    for i in range(len(items)):
+        if i != 0:
+            items[i].append_downstream_dependency(items[i-1])
+        if i < len(items)-1:
+            items[i].append_upstream_dependency(items[i+1])
+
+    return (item_names, items[0])
 
 class TestDependencyWrangler:
     def test_empty_dependency_wrangler_class_creation(self):
@@ -99,3 +121,22 @@ class TestDependencyWrangler:
         """
         wrangler = self.test_dependency_wrangler_class_creation()
         assert wrangler.validate() is True
+
+    def test_dependency_wrangler_analysis(self):
+        """
+        Ensure that the analysis of a simple dependency tree is working and that data has been translated
+        accurately and successfully
+        """
+        wrangler = self.test_dependency_wrangler_class_creation()
+        item_names, item = construct_sample_tree_item()
+        wrangler.analyse(item)
+
+        for item_name in item_names:
+            assert item_name in wrangler.analysed_objects
+
+        for i in range(len(item_names)):
+            item_name = item_names[i]
+            if i != 0:
+                assert item_names[i-1] in [x.id for x in wrangler.items[item_name].downstream_dependencies]
+            if i < len(item_names) - 1:
+                assert item_names[i+1] in [x.id for x in wrangler.items[item_name].upstream_dependencies]
