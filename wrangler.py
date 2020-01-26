@@ -64,6 +64,7 @@ class DependencyWrangler(object):
                  object_downstream_callback=None,
                  object_type_attribute=None,
                  object_identifier_attribute=None,
+                 bypass_types=None,
                  *args, **kwargs):
         """
         Initialize the DependencyWrangler class with the required attributes.
@@ -93,6 +94,7 @@ class DependencyWrangler(object):
         self._object_downstream_callback = object_downstream_callback
         self._object_identifier_attribute = object_identifier_attribute
         self._object_type_attribute = object_type_attribute
+        self._bypass_types = bypass_types or list()
 
         self._dependency_tree = dict()
 
@@ -165,10 +167,18 @@ class DependencyWrangler(object):
             # Loop through upstream dependencies and re-call this analyse function
             for dependency in self.object_upstream_callback(item):
                 dependency_item = self.analyse(dependency)
-                processed_item.append_upstream_dependency(dependency_item)
+                if dependency_item.type in self._bypass_types:
+                    for sub_dependency in dependency_item.upstream_dependencies:
+                        processed_item.append_upstream_dependency(sub_dependency)
+                else:
+                    processed_item.append_upstream_dependency(dependency_item)
             # Loop through downstream dependencies and re-call this analyse function
             for dependency in self.object_downstream_callback(item):
                 dependency_item = self.analyse(dependency)
-                processed_item.append_downstream_dependency(dependency_item)
+                if dependency_item.type in self._bypass_types:
+                    for sub_dependency in dependency_item.upstream_dependencies:
+                        processed_item.append_downstream_dependency(sub_dependency)
+                else:
+                    processed_item.append_downstream_dependency(dependency_item)
         # Return the item that has been created and or referenced in this iteration
         return self.items[item_identifier]

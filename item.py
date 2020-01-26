@@ -10,6 +10,14 @@ class DependencyItem(object):
     def downstream_dependencies(self):
         return self._downstream_dependencies
 
+    @upstream_dependencies.setter
+    def upstream_dependencies(self):
+        pass
+
+    @downstream_dependencies.setter
+    def downstream_dependencies(self):
+        pass
+
     def __init__(self, id, type, item):
         """
         Initialize the DependencyItem object with the unique identifier and the item itself, and

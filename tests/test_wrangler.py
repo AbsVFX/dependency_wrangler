@@ -42,6 +42,27 @@ def construct_sample_tree_item():
 
     return (item_names, items[0])
 
+def construct_sample_multi_type_tree_item():
+    item_names = ["MultiTypeItemA",
+                  "MultiTypeItemB",
+                  "MultiTypeItemC",
+                  "MultiTypeItemD",
+                  "MultiTypeItemE"]
+    items = [
+        SampleDependencyObject(
+            _id=item_name, _type=item_name
+        )
+        for item_name in item_names
+    ]
+
+    for i in range(len(items)):
+        if i != 0:
+            items[i].append_downstream_dependency(items[i-1])
+        if i < len(items)-1:
+            items[i].append_upstream_dependency(items[i+1])
+
+    return (item_names, items[0])
+
 class TestDependencyWrangler:
     def test_empty_dependency_wrangler_class_creation(self):
         """
@@ -79,6 +100,37 @@ class TestDependencyWrangler:
             object_downstream_callback=object_downstream_callback,
             object_identifier_attribute=object_identifier_attribute,
             object_type_attribute=object_type_attribute
+        )
+
+        assert wrangler._object_metaclass is object_class
+        assert wrangler._object_upstream_callback is object_upstream_callback
+        assert wrangler._object_downstream_callback is object_downstream_callback
+        assert wrangler._object_identifier_attribute == object_identifier_attribute
+        assert wrangler.object_metaclass is object_class
+        assert wrangler.object_upstream_callback is object_upstream_callback
+        assert wrangler.object_downstream_callback is object_downstream_callback
+        assert wrangler.object_identifier_attribute == object_identifier_attribute
+        return wrangler
+
+    def test_dependency_wrangler_bypassed_class_creation(self, bypass_types=None):
+        """
+        Ensure that there are no errors when initializing the DependencyWrangler class, and validate that the
+        attributes are initialized correctly
+        """
+
+        object_class = SampleDependencyObject
+        object_upstream_callback = SampleDependencyObject.upstream_dependencies
+        object_downstream_callback = SampleDependencyObject.downstream_dependencies
+        object_identifier_attribute = "id"
+        object_type_attribute = "type"
+
+        wrangler = DependencyWrangler(
+            object_class=object_class,
+            object_upstream_callback=object_upstream_callback,
+            object_downstream_callback=object_downstream_callback,
+            object_identifier_attribute=object_identifier_attribute,
+            object_type_attribute=object_type_attribute,
+            bypass_types=bypass_types or list()
         )
 
         assert wrangler._object_metaclass is object_class
@@ -143,3 +195,32 @@ class TestDependencyWrangler:
                 assert item_names[i-1] in [x.id for x in wrangler.items[item_name].downstream_dependencies]
             if i < len(item_names) - 1:
                 assert item_names[i+1] in [x.id for x in wrangler.items[item_name].upstream_dependencies]
+
+    def test_bypassed_dependency_wrangler_analysis(self):
+        """
+        Ensure that the analysis of a simple dependency tree is working and that data has been translated
+        accurately and successfully, including when bypassing a specific item type
+        """
+        item_names, item = construct_sample_multi_type_tree_item()
+        bypass_item_type = item_names[2]
+        wrangler = self.test_dependency_wrangler_bypassed_class_creation(bypass_item_type)
+        wrangler.analyse(item)
+
+        for item_name in item_names:
+            assert item_name in wrangler.analysed_objects
+            processed_item = wrangler.items[item_name]
+            assert bypass_item_type not in processed_item.upstream_dependencies
+            assert bypass_item_type not in processed_item.downstream_dependencies
+
+        for i in range(len(item_names)):
+            item_name = item_names[i]
+            if i != 0:
+                if item_names[i-1] != bypass_item_type:
+                    assert item_names[i-1] in [x.id for x in wrangler.items[item_name].downstream_dependencies]
+                else:
+                    assert item_names[i-1] not in [x.id for x in wrangler.items[item_name].downstream_dependencies]
+            if i < len(item_names) - 1:
+                if item_names[i+1] != bypass_item_type:
+                    assert item_names[i+1] in [x.id for x in wrangler.items[item_name].upstream_dependencies]
+                else:
+                    assert item_names[i+1] not in [x.id for x in wrangler.items[item_name].upstream_dependencies]
