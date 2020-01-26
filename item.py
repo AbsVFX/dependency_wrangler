@@ -10,7 +10,7 @@ class DependencyItem(object):
     def downstream_dependencies(self):
         return self._downstream_dependencies
 
-    def __init__(self, id, item):
+    def __init__(self, id, type, item):
         """
         Initialize the DependencyItem object with the unique identifier and the item itself, and
         declares the initial upstream & downstream dependencies private lists
@@ -20,6 +20,7 @@ class DependencyItem(object):
         super(DependencyItem, self).__init__()
 
         self.id = id
+        self.type = type
         self.object = item
         self._upstream_dependencies = list()
         self._downstream_dependencies = list()

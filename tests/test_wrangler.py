@@ -3,8 +3,9 @@ from ..wrangler import DependencyWrangler
 
 
 class SampleDependencyObject(object):
-    def __init__(self, id):
-        self.id = id
+    def __init__(self, _id, _type="Basic"):
+        self.id = _id
+        self.type = _type
         self._upstream_dependencies = []
         self._downstream_dependencies = []
 
@@ -70,12 +71,14 @@ class TestDependencyWrangler:
         object_upstream_callback = SampleDependencyObject.upstream_dependencies
         object_downstream_callback = SampleDependencyObject.downstream_dependencies
         object_identifier_attribute = "id"
+        object_type_attribute = "type"
 
         wrangler = DependencyWrangler(
             object_class=object_class,
             object_upstream_callback=object_upstream_callback,
             object_downstream_callback=object_downstream_callback,
-            object_identifier_attribute=object_identifier_attribute
+            object_identifier_attribute=object_identifier_attribute,
+            object_type_attribute=object_type_attribute
         )
 
         assert wrangler._object_metaclass is object_class

@@ -39,6 +39,14 @@ class DependencyWrangler(object):
         pass
 
     @property
+    def object_type_attribute(self):
+        return self._object_type_attribute
+
+    @object_type_attribute.setter
+    def object_type_attribute(self):
+        pass
+
+    @property
     def analysed_objects(self):
         return self._dependency_tree.keys()
 
@@ -54,6 +62,7 @@ class DependencyWrangler(object):
                  object_class=None,
                  object_upstream_callback=None,
                  object_downstream_callback=None,
+                 object_type_attribute=None,
                  object_identifier_attribute=None,
                  *args, **kwargs):
         """
@@ -73,6 +82,7 @@ class DependencyWrangler(object):
         :param object_downstream_callback: (callable) A function to call on an object to retrieve downstream
         dependencies
         :param object_identifier_attribute: (object) The attribute on all objects that contains the unique id
+        :param object_type_attribute: (object) The attribute on all objects that contains the type
         :param args: (tuple) additional arguments to pass to the *object* initialization function
         :param kwargs: (dict) additional key/value pairs to pass to the *object* initialization function
         """
@@ -82,6 +92,7 @@ class DependencyWrangler(object):
         self._object_upstream_callback = object_upstream_callback
         self._object_downstream_callback = object_downstream_callback
         self._object_identifier_attribute = object_identifier_attribute
+        self._object_type_attribute = object_type_attribute
 
         self._dependency_tree = dict()
 
@@ -113,9 +124,14 @@ class DependencyWrangler(object):
                 "The attribute name pointing to the unique identifier has not been specified"
             )
 
+        if not self.object_type_attribute:
+            raise AttributeError(
+                "The attribute name pointing to the type has not been specified"
+            )
+
         return True
 
-    def _define_item(self, item_identifier, item):
+    def _define_item(self, item_identifier, item_type, item):
         """
         Creates a DependencyItem object which contains both the upstream and downstream dependencies
         for this object within the iteration. It will also append the created object to the internal list of
@@ -124,7 +140,7 @@ class DependencyWrangler(object):
         :param item: (object) the actual object that the DependencyItem object will represent
         :return: (DependencyObject) the internal object representing the actual object
         """
-        processed_item = DependencyItem(item_identifier, item)
+        processed_item = DependencyItem(item_identifier, item_type, item)
         self._dependency_tree[item_identifier] = processed_item
         return processed_item
 
@@ -137,14 +153,15 @@ class DependencyWrangler(object):
         """
         # Run validation to ensure that this instance of the DependencyWrangler is populated correctly
         self.validate()
-        # Extract the unique identifier from the specified item
+        # Extract the unique identifier & type from the specified item
         item_identifier = getattr(item, self.object_identifier_attribute)
+        item_type = getattr(item, self.object_type_attribute)
         # Only process this object if it hasn't been processed already. This would be the case when working upwards
         # through a tree, and making our way back down to catch any lingering dependencies in a more complex dependency
         # tree
         if item_identifier not in self.analysed_objects:
             # Create an internal item that represents the real item that is currently within the iteration
-            processed_item = self._define_item(item_identifier, item)
+            processed_item = self._define_item(item_identifier, item_type, item)
             # Loop through upstream dependencies and re-call this analyse function
             for dependency in self.object_upstream_callback(item):
                 dependency_item = self.analyse(dependency)
