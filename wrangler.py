@@ -68,3 +68,33 @@ class DependencyWrangler(object):
         self._object_upstream_callback = object_upstream_callback
         self._object_downstream_callback = object_downstream_callback
         self._object_identifier_attribute = object_identifier_attribute
+
+    def validate(self):
+        """
+        Validate that the DependencyWrangler class has been initialized and populated correctly, by iterating through
+        each required attribute for analysis and ensuring that they have a value that is not None set to them. If any
+        attribute fails the validation, an *AttributeError* will be raised with the specific attribute that has an
+        invalid value in the error.
+        :return: (bool) True if validation passes
+        """
+        if not self.object_metaclass:
+            raise AttributeError(
+                "A metaclass hasn't been specified"
+            )
+
+        if not self.object_downstream_callback:
+            raise AttributeError(
+                "A callback for obtaining downstream dependencies has not been specified."
+            )
+
+        if not self.object_upstream_callback:
+            raise AttributeError(
+                "A callback for obtaining upstream dependencies has not been specified"
+            )
+
+        if not self.object_identifier_attribute:
+            raise AttributeError(
+                "The attribute name pointing to the unique identifier has not been specified"
+            )
+
+        return True
