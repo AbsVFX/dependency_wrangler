@@ -143,6 +143,55 @@ class TestDependencyWrangler:
         assert wrangler.object_identifier_attribute == object_identifier_attribute
         return wrangler
 
+    def test_dependency_wrangler_required_class_creation(self, bypass_types=None):
+        """
+        Ensure that there are no errors when initializing the DependencyWrangler class, and validate that the
+        attributes are initialized correctly
+        """
+
+        object_class = SampleDependencyObject
+        object_upstream_callback = SampleDependencyObject.upstream_dependencies
+        object_downstream_callback = SampleDependencyObject.downstream_dependencies
+        object_identifier_attribute = "id"
+        object_type_attribute = "type"
+
+        wrangler = DependencyWrangler(
+            object_class=object_class,
+            object_upstream_callback=object_upstream_callback,
+            object_downstream_callback=object_downstream_callback,
+            object_identifier_attribute=object_identifier_attribute,
+            object_type_attribute=object_type_attribute,
+            required_types=bypass_types or list()
+        )
+
+        assert wrangler._object_metaclass is object_class
+        assert wrangler._object_upstream_callback is object_upstream_callback
+        assert wrangler._object_downstream_callback is object_downstream_callback
+        assert wrangler._object_identifier_attribute == object_identifier_attribute
+        assert wrangler.object_metaclass is object_class
+        assert wrangler.object_upstream_callback is object_upstream_callback
+        assert wrangler.object_downstream_callback is object_downstream_callback
+        assert wrangler.object_identifier_attribute == object_identifier_attribute
+        return wrangler
+
+    def test_overspecified_dependency_wrangler_class_creation(self):
+        object_class = SampleDependencyObject
+        object_upstream_callback = SampleDependencyObject.upstream_dependencies
+        object_downstream_callback = SampleDependencyObject.downstream_dependencies
+        object_identifier_attribute = "id"
+        object_type_attribute = "type"
+
+        with pytest.raises(Exception, match=".*specified"):
+            DependencyWrangler(
+                object_class=object_class,
+                object_upstream_callback=object_upstream_callback,
+                object_downstream_callback=object_downstream_callback,
+                object_identifier_attribute=object_identifier_attribute,
+                object_type_attribute=object_type_attribute,
+                bypass_types=[0],
+                required_types=[0]
+            )
+
     def test_invalid_dependency_wrangler_class_validation(self):
         """
         Verify that an insufficient amount of data to the DependencyWrangler class will break the validation
@@ -224,3 +273,21 @@ class TestDependencyWrangler:
                     assert item_names[i+1] in [x.id for x in wrangler.items[item_name].upstream_dependencies]
                 else:
                     assert item_names[i+1] not in [x.id for x in wrangler.items[item_name].upstream_dependencies]
+
+    def test_required_dependency_wrangler_analysis(self):
+        """
+        Ensure that the analysis of a simple dependency tree is working and that data has been translated
+        accurately and successfully, including when bypassing a specific item type
+        """
+        item_names, item = construct_sample_multi_type_tree_item()
+        bypass_item_type = [item_names[1], item_names[3]]
+        wrangler = self.test_dependency_wrangler_required_class_creation(bypass_item_type)
+        wrangler.analyse(item)
+
+        for item_name in item_names:
+            assert item_name in wrangler.analysed_objects
+            processed_item = wrangler.items[item_name]
+            assert bypass_item_type not in processed_item.upstream_dependencies
+            assert bypass_item_type not in processed_item.downstream_dependencies
+
+        assert wrangler.available_objects == bypass_item_type

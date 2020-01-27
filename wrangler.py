@@ -90,6 +90,7 @@ class DependencyWrangler(object):
                  object_type_attribute=None,
                  object_identifier_attribute=None,
                  bypass_types=None,
+                 required_types=None,
                  *args, **kwargs):
         """
         Initialize the DependencyWrangler class with the required attributes.
@@ -122,9 +123,13 @@ class DependencyWrangler(object):
         self._object_type_attribute = object_type_attribute
         self._object_identifier_callback = object_identifier_callback
         self._object_type_callback = object_type_callback
-        self._bypass_types = bypass_types or list()
 
         self._dependency_tree = dict()
+
+        if bypass_types and required_types:
+            raise Exception("Both bypass_types and required_types arguments have been specified.")
+        self._bypass_types = bypass_types or list()
+        self._required_types = required_types or list()
 
     def validate(self):
         """
@@ -170,7 +175,9 @@ class DependencyWrangler(object):
         :param item: (object) the actual object that the DependencyItem object will represent
         :return: (DependencyObject) the internal object representing the actual object
         """
-        item_bypassed = (item_type in self._bypass_types)
+        item_bypassed = \
+            (item_type in self._bypass_types) or \
+            (self._required_types and item_type not in self._required_types)
         processed_item = DependencyItem(item_identifier, item_type, item, item_bypassed)
         self._dependency_tree[item_identifier] = processed_item
         return processed_item
@@ -202,18 +209,20 @@ class DependencyWrangler(object):
             # Loop through upstream dependencies and re-call this analyse function
             for dependency in self.object_upstream_callback(item):
                 dependency_item = self.analyse(dependency)
-                if dependency_item.type in self._bypass_types:
-                    for sub_dependency in dependency_item.upstream_dependencies:
+                if dependency_item.type in self._bypass_types \
+                    or (self._required_types and dependency_item.type in self._required_types):
+                      for sub_dependency in dependency_item.upstream_dependencies:
                         processed_item.append_upstream_dependency(sub_dependency)
-                else:
+                elif not self._required_types or dependency_item.type in self._required_types:
                     processed_item.append_upstream_dependency(dependency_item)
             # Loop through downstream dependencies and re-call this analyse function
             for dependency in self.object_downstream_callback(item):
                 dependency_item = self.analyse(dependency)
-                if dependency_item.type in self._bypass_types:
-                    for sub_dependency in dependency_item.upstream_dependencies:
-                        processed_item.append_downstream_dependency(sub_dependency)
-                else:
+                if dependency_item.type in self._bypass_types \
+                        or (self._required_types and dependency_item.type in self._required_types):
+                          for sub_dependency in dependency_item.upstream_dependencies:
+                              processed_item.append_downstream_dependency(sub_dependency)
+                elif not self._required_types or dependency_item.type in self._required_types:
                     processed_item.append_downstream_dependency(dependency_item)
         # Return the item that has been created and or referenced in this iteration
         return self.items[item_identifier]
