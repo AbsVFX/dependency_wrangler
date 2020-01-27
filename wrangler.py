@@ -10,68 +10,70 @@ class DependencyWrangler(object):
     def object_metaclass(self):
         return self._object_metaclass
 
-    @object_metaclass.setter
-    def object_metaclass(self):
-        pass
-
     @property
     def object_upstream_callback(self):
         return self._object_upstream_callback
-
-    @object_upstream_callback.setter
-    def object_upstream_callback(self):
-        pass
 
     @property
     def object_downstream_callback(self):
         return self._object_downstream_callback
 
-    @object_downstream_callback.setter
-    def object_downstream_callback(self):
-        pass
-
     @property
     def object_identifier_attribute(self):
         return self._object_identifier_attribute
-
-    @object_identifier_attribute.setter
-    def object_identifier_attribute(self):
-        pass
 
     @property
     def object_type_attribute(self):
         return self._object_type_attribute
 
-    @object_type_attribute.setter
-    def object_type_attribute(self):
-        pass
-    
     @property
     def object_identifier_callback(self):
         return self._object_identifier_callback
-
-    @object_identifier_callback.setter
-    def object_identifier_callback(self):
-        pass
 
     @property
     def object_type_callback(self):
         return self._object_type_callback
 
-    @object_type_callback.setter
-    def object_type_callback(self):
-        pass
-
     @property
     def analysed_objects(self):
+        """
+        Lists *all* items that have been processed by this instance of the DependencyWrangler class, including that
+        of bypassed
+        :return: (list) unique identifiers for all processed items
+        """
         return self._dependency_tree.keys()
 
     @property
     def available_objects(self):
-        return [
-            key for key,value in self._dependency_tree.items()
+        """
+        Returns all items that have been processed by this instance of the DependencyWranger class that are not being
+        bypassed
+        :return: (dict) information about each processed item, including dependencies, unique identifiers and
+        formatted dependencies
+        """
+        # Create IDs for each item within the DependencyTree, by using the list of keys, and associating their index
+        # as their numeric ID
+        object_id_list = [key for key,value in self._dependency_tree.items() if not value.bypass]
+        return {
+            # Set the key to the unique identifier of the object within the iteration
+            key: {
+                # Set the item key/value pair to the DependencyItem object
+                'item': value,
+                # Extract the numeric id for this item
+                'numeric_id': object_id_list.index(key),
+                # Convert dependency objects within the DependencyItem object to the unique identifier
+                'dependencies': [
+                    {'id': item.id, 'numeric_id': object_id_list.index(item.id)}
+                    for item in value.upstream_dependencies
+                ],
+                # Extract additional information from the DependencyItem object itself
+                'data': value.to_dict()
+            }
+            # Loop through all items within the dependency tree
+            for key,value in self._dependency_tree.items()
+            # Only add to the dictionary if the item in the iteration is not being bypassed
             if not value.bypass
-        ]
+        }
 
     @property
     def items(self):

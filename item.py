@@ -18,6 +18,14 @@ class DependencyItem(object):
     def downstream_dependencies(self):
         pass
 
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'type': self.type,
+            'item': self.object,
+            'bypass': self.bypass
+        }
+
     def __init__(self, id, type, item, bypass=False):
         """
         Initialize the DependencyItem object with the unique identifier and the item itself, and

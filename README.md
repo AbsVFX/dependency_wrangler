@@ -48,3 +48,26 @@ wrangler.analyse(nuke.selectedNode())
 # Obtain the filtered node list
 node_list = wrangler.available_nodes
 ```
+
+### Thinkbox: Deadline
+In this example, we are taking the output of the `available_nodes` property and converting the information to that of 
+the Deadline Python API, so that Deadline is able to schedule the tasks accordingly based upon the structure within the
+DAG.
+```python
+from Deadline.DeadlineConnect import DeadlineCon
+deadline = DeadlineCon('localhost', 8082)
+
+available_nodes = wrangler.available_nodes
+
+deadline_job_info = {
+    'JobInfo': {
+        'Plugin': 'Houdini'
+    },
+    'PluginInfo': {
+        'RopPath': _id
+    },
+    'AuxFiles': [...],
+    'Dependencies': [dependency.get('numeric_id') for dependency in node['dependencies']]
+    for _id, node in available_nodes.items()
+}
+```
