@@ -18,7 +18,7 @@ class DependencyItem(object):
     def downstream_dependencies(self):
         pass
 
-    def __init__(self, id, type, item):
+    def __init__(self, id, type, item, bypass=False):
         """
         Initialize the DependencyItem object with the unique identifier and the item itself, and
         declares the initial upstream & downstream dependencies private lists
@@ -30,6 +30,7 @@ class DependencyItem(object):
         self.id = id
         self.type = type
         self.object = item
+        self.bypass = bypass
         self._upstream_dependencies = list()
         self._downstream_dependencies = list()
 

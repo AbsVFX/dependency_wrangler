@@ -45,10 +45,33 @@ class DependencyWrangler(object):
     @object_type_attribute.setter
     def object_type_attribute(self):
         pass
+    
+    @property
+    def object_identifier_callback(self):
+        return self._object_identifier_callback
+
+    @object_identifier_callback.setter
+    def object_identifier_callback(self):
+        pass
+
+    @property
+    def object_type_callback(self):
+        return self._object_type_callback
+
+    @object_type_callback.setter
+    def object_type_callback(self):
+        pass
 
     @property
     def analysed_objects(self):
         return self._dependency_tree.keys()
+
+    @property
+    def available_objects(self):
+        return [
+            key for key,value in self._dependency_tree.items()
+            if not value.bypass
+        ]
 
     @property
     def items(self):
@@ -62,6 +85,8 @@ class DependencyWrangler(object):
                  object_class=None,
                  object_upstream_callback=None,
                  object_downstream_callback=None,
+                 object_identifier_callback=None,
+                 object_type_callback=None,
                  object_type_attribute=None,
                  object_identifier_attribute=None,
                  bypass_types=None,
@@ -84,6 +109,7 @@ class DependencyWrangler(object):
         dependencies
         :param object_identifier_attribute: (object) The attribute on all objects that contains the unique id
         :param object_type_attribute: (object) The attribute on all objects that contains the type
+        :param bypass_types: (list/str) List of strings defining types of objects to bypass when analysing the tree
         :param args: (tuple) additional arguments to pass to the *object* initialization function
         :param kwargs: (dict) additional key/value pairs to pass to the *object* initialization function
         """
@@ -94,6 +120,8 @@ class DependencyWrangler(object):
         self._object_downstream_callback = object_downstream_callback
         self._object_identifier_attribute = object_identifier_attribute
         self._object_type_attribute = object_type_attribute
+        self._object_identifier_callback = object_identifier_callback
+        self._object_type_callback = object_type_callback
         self._bypass_types = bypass_types or list()
 
         self._dependency_tree = dict()
@@ -142,7 +170,8 @@ class DependencyWrangler(object):
         :param item: (object) the actual object that the DependencyItem object will represent
         :return: (DependencyObject) the internal object representing the actual object
         """
-        processed_item = DependencyItem(item_identifier, item_type, item)
+        item_bypassed = (item_type in self._bypass_types)
+        processed_item = DependencyItem(item_identifier, item_type, item, item_bypassed)
         self._dependency_tree[item_identifier] = processed_item
         return processed_item
 
@@ -156,8 +185,14 @@ class DependencyWrangler(object):
         # Run validation to ensure that this instance of the DependencyWrangler is populated correctly
         self.validate()
         # Extract the unique identifier & type from the specified item
-        item_identifier = getattr(item, self.object_identifier_attribute)
-        item_type = getattr(item, self.object_type_attribute)
+        if self.object_identifier_callback:
+            item_identifier = self.object_identifier_callback(item)
+        else:
+            item_identifier = getattr(item, self.object_identifier_attribute)
+        if self.object_type_callback:
+            item_type = self.object_type_callback(item)
+        else:
+            item_type = getattr(item, self.object_type_attribute)
         # Only process this object if it hasn't been processed already. This would be the case when working upwards
         # through a tree, and making our way back down to catch any lingering dependencies in a more complex dependency
         # tree
